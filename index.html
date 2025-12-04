@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Ordini Prodotti</title>
+    <!-- Carica Tailwind CSS per uno stile moderno e responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4CAF50', // Verde Montesarchio
+                        'secondary': '#FF9800', // Arancione Accento
+                        'edit': '#2196F3', // Blu per l'azione di modifica
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Stili personalizzati per l'interfaccia mobile/tablet */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f4f9;
+        }
+        .app-container {
+            max-width: 768px; /* Tablet breakpoint */
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+        .keyboard-key {
+            @apply p-4 m-0.5 rounded-lg text-2xl font-bold transition duration-150 ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-active {
+            @apply ring-4 ring-primary ring-opacity-50;
+        }
+        /* La classe summary-column è usata per simulare la divisione nel display, anche se la logica è JS */
+        .summary-column {
+            display: flex;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body class="selection:bg-primary selection:text-white">
+
+    <div id="app" class="app-container">
+
+        <!-- 1. Header con Selezione Titolo e Pulsante Aggiungi Prodotto -->
+        <header class="p-4 bg-primary text-white shadow-lg sticky top-0 z-10">
+            <h1 id="header-title" class="text-xl font-extrabold text-center">Montesarchio</h1>
+            <div class="flex justify-between items-center mt-2">
+                <select id="title-selector" class="bg-white text-gray-800 p-1.5 rounded-md text-sm shadow-md focus:ring-2 focus:ring-secondary">
+                    <option value="Montesarchio">Montesarchio</option>
+                    <option value="Benevento">Benevento</option>
+                </select>
+                <div class="flex space-x-2">
+                    <button id="show-summary-btn" class="bg-secondary hover:bg-orange-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow-md transition duration-200 text-sm">
+                        Riepilogo
+                    </button>
+                    <button id="add-product-btn" class="bg-secondary hover:bg-orange-600 text-white font-semibold py-1.5 px-3 rounded-lg shadow-md transition duration-200 text-sm">
+                        + Prodotto
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. Main Content: Lista Prodotti -->
+        <main id="main-list-view" class="flex-1 overflow-y-auto p-4 space-y-2">
+            <!-- La lista dei prodotti verrà popolata qui -->
+            <div id="product-list" class="space-y-1"></div>
+        </main>
+
+        <!-- 3. Tastiera Numerica (Fixed at bottom) -->
+        <div id="keyboard-container" class="sticky bottom-0 bg-gray-100 border-t border-gray-300 p-2 shadow-2xl">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2 px-2">Quantità Selezionata: <span id="current-quantity" class="text-primary font-extrabold">0</span></h2>
+            <div id="keyboard" class="grid grid-cols-4 gap-1">
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="7">7</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="8">8</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="9">9</button>
+                <button class="keyboard-key bg-primary text-white hover:bg-green-600 col-span-1 row-span-2" data-key="APPLY">APPLICA</button>
+
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="4">4</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="5">5</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="6">6</button>
+
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="1">1</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="2">2</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="3">3</button>
+                <button class="keyboard-key bg-red-500 text-white hover:bg-red-600 col-span-1 row-span-2" data-key="CLEAR">AZZERA</button>
+
+                <button class="keyboard-key bg-gray-300 text-gray-800 hover:bg-gray-400 col-span-1" data-key="BACK">⌫</button>
+                <button class="keyboard-key bg-white text-gray-800 hover:bg-gray-200 col-span-1" data-key="0">0</button>
+                <button class="keyboard-key bg-gray-300 text-gray-800 hover:bg-gray-400 col-span-1" data-key="RESET_INPUT">PULISCI</button>
+            </div>
+        </div>
+
+        <!-- 4. Modale/View Riepilogo -->
+        <div id="summary-view" class="fixed inset-0 bg-white z-20 p-4 transition-transform duration-300 transform translate-x-full overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-xl font-bold text-primary">Riepilogo Ordine - <span id="summary-title">Montesarchio</span></h2>
+                <button id="close-summary-btn" class="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none">&times;</button>
+            </div>
+
+            <div id="summary-content" class="text-xs">
+                <!-- Il riepilogo verrà popolato qui -->
+            </div>
+
+            <button id="copy-summary-btn" class="mt-4 w-full bg-secondary hover:bg-orange-600 text-white font-bold py-2 rounded-lg shadow-md transition duration-200">
+                Copia Testo
+            </button>
+            <div id="copy-message" class="text-center text-primary mt-2 hidden">Copiato negli appunti!</div>
+        </div>
+
+        <!-- 5. Modale Aggiungi Prodotto -->
+        <div id="add-product-modal" class="fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center p-4 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h3 class="text-lg font-bold mb-4">Aggiungi Nuovo Prodotto</h3>
+                <input type="text" id="new-product-name" placeholder="Nome Prodotto (es: Nuovo Biscotto)" class="w-full p-2 border border-gray-300 rounded-md mb-3 focus:ring-primary focus:border-primary">
+                <input type="text" id="new-product-unit" placeholder="Unità (es: Pz, Conf, Kg)" class="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-primary focus:border-primary">
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-add-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 rounded-md">Annulla</button>
+                    <button id="save-new-product-btn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600">Salva</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Modale Modifica Nome Prodotto -->
+        <div id="edit-product-modal" class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4 hidden">
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h3 class="text-lg font-bold mb-4">Modifica Nome Prodotto</h3>
+                <input type="hidden" id="edit-product-id">
+                <input type="text" id="edit-product-name" placeholder="Nuovo Nome Prodotto" class="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-edit focus:border-edit">
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-edit-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 rounded-md">Annulla</button>
+                    <button id="save-edit-btn" class="px-4 py-2 bg-edit text-white rounded-md hover:bg-blue-600">Salva</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messaggio di errore/successo -->
+        <div id="message-box" class="fixed top-4 right-4 p-3 bg-red-500 text-white rounded-lg shadow-xl hidden transition duration-300 z-50"></div>
+
+    </div>
+
+<script type="module">
+    // Importazioni Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Imposta il livello di log per Firestore (Utile per il debug)
+    setLogLevel('Debug');
+
+    // Variabili Globali (fornite dall'ambiente Canvas)
+    let app;
+    let db;
+    let auth;
+    let userId = null;
+    let currentData = { products: [] }; // Stato locale dei prodotti
+
+    // Stato dell'input
+    let activeInputId = null; // ID del prodotto attualmente selezionato
+    let currentQuantityInput = ''; // Valore numerico in costruzione
+    
+    // Inizializzazione sicura delle variabili globali
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    let firebaseConfig = null;
+    const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+    try {
+        if (firebaseConfigString) {
+            // Tenta di fare il parse solo se la stringa esiste, con gestione degli errori
+            firebaseConfig = JSON.parse(firebaseConfigString);
+        }
+    } catch (e) {
+        console.error("Errore nel parsing della configurazione Firebase:", e);
+    }
+    // Fine Inizializzazione sicura
+
+    // Lista iniziale dei prodotti basata sulla lista corretta fornita dall'utente.
+    const INITIAL_PRODUCTS = [
+        { name: "Pizza Parigina", unit: "Teglie" },
+        { name: "Foc. Scarola", unit: "Pz" },
+        { name: "Cornetti crema", unit: "Pz" },
+        { name: "Fagottino", unit: "Pz" },
+        { name: "Cornetto Vuoto", unit: "Pz" },
+        { name: "Ciambelle", unit: "Pz" },
+        { name: "Rustici Grandi", unit: "Pz" },
+        { name: "Rustici Mignon", unit: "Pz" },
+        { name: "Mollica", unit: "Kg" },
+        { name: "Biscotta Bianca", unit: "Pacco" },
+        { name: "Biscotta Integrale", unit: "Pacco" },
+        { name: "Fresella Bianca", unit: "Pacco" },
+        { name: "Fresella Integrale", unit: "Pacco" },
+        { name: "Fresella Tonda Bianca", unit: "Pacco" },
+        { name: "Fresella Tonda Integrale", unit: "Pacco" },
+        { name: "Pastarelle Bianche", unit: "Pacco" },
+        { name: "Pastarelle al Cacao", unit: "Pacco" },
+        { name: "Pastarelle al Cacao Morbide", unit: "Pacco" },
+        { name: "Pastarelle Mandorlate", unit: "Pacco" },
+        { name: "Taralli al finocchietto", unit: "Pacco" },
+        { name: "Taralli Extravergine", unit: "Pacco" },
+        { name: "Taralli Integrali", unit: "Pacco" },
+        { name: "Pan Grattato", unit: "Pacco" },
+        { name: "Crostini Proteici", unit: "Pacco" },
+        { name: "Taralli Mergellina", unit: "Kg" },
+        { name: "Treccine", unit: "Pz" },
+        { name: "Torcetti al burro", unit: "Pacco" },
+        { name: "Ciambelline al vino rosso", unit: "Pacco" },
+        { name: "Novellini", unit: "Pacco" },
+        { name: "Carbonelle", unit: "CRT" },
+        { name: "Farina tipo “00“", unit: "Kg" },
+        { name: "Farina grano duro", unit: "Kg" },
+        { name: "Farina Integrale", unit: "Kg" },
+        { name: "Farina di Mais", unit: "Kg" },
+        { name: "Mozzarella", unit: "Pz" },
+        { name: "Uova", unit: "Conf" },
+        { name: "Olio di semi girasole", unit: "Litro" },
+        { name: "Olio extravergine di oliva", unit: "Conf" },
+        { name: "zucchero semolato", unit: "Kg" },
+        { name: "Lievito pan degli angeli", unit: "Conf" },
+        { name: "Marmellata frutti di bosco", unit: "Conf" },
+        { name: "Marmellata albicocche", unit: "Conf" },
+        { name: "Marmellata ciliegie", unit: "Conf" },
+        { name: "Acqua L 1.5 liscia", unit: "Conf" },
+        { name: "Acqua L 0.5 liscia", unit: "Conf" },
+        { name: "Acqua L 1.5 frizzante", unit: "Conf" },
+        { name: "Acqua L 0.5 frizzante", unit: "Conf" },
+        { name: "Coca-Cola Lattina", unit: "Conf" },
+        { name: "Coca-Cola L 1.5", unit: "Conf" },
+        { name: "Esta the limone", unit: "Conf" },
+        { name: "Esta the pesca", unit: "Conf" },
+        { name: "Ceres", unit: "Conf" },
+        { name: "Fanta", unit: "Conf" },
+        { name: "Sugo", unit: "Conf" },
+        { name: "Stampi plum-cake", unit: "Pz" },
+        { name: "Nutella", unit: "Barattolo" },
+        { name: "Carta Forno", unit: "Rotolo" },
+        { name: "Stampi Rotondi", unit: "Pz" },
+        { name: "Shopperini", unit: "Kg" },
+        { name: "Sacchetti carta Filone", unit: "Kg" },
+        { name: "Sacchetti carta Panello", unit: "Kg" },
+        { name: "Sacchetti carta 1/2 kg", unit: "Kg" },
+        { name: "Sacchetti carta Scanata", unit: "Kg" },
+        { name: "Sacchetti Cornetti", unit: "Kg" },
+        { name: "Carta finissima", unit: "Kg" },
+        { name: "Carta Intestata", unit: "Pz" },
+        { name: "Guanti Pane", unit: "Conf" },
+        { name: "Tovagliolini", unit: "Conf" },
+        { name: "Vassoi fondo oro", unit: "Pz" },
+        { name: "Sovrainvolto Avana", unit: "Pz" },
+        { name: "Cartoni pizza Grandi", unit: "Pz" },
+        { name: "Cartoni pizza Piccoli", unit: "Pz" },
+        { name: "Rotoli reg. cassa", unit: "Rotolo" },
+        { name: "Guanti Monouso", unit: "Conf" },
+        { name: "Scotch piccolo", unit: "Pz" },
+        { name: "Scotch grande", unit: "Pz" },
+        { name: "Pennarelli", unit: "Pz" },
+        { name: "Miele cf 50 gr.", unit: "Barattolo" },
+        { name: "Miele Acacia", unit: "Barattolo" },
+        { name: "Miele Castagno", unit: "Barattolo" },
+        { name: "Miele Millefiori", unit: "Barattolo" },
+        { name: "Miele Eucalipto", unit: "Barattolo" },
+        { name: "Miele di Sulla", unit: "Barattolo" },
+        { name: "Miele Melata di Bosco", unit: "Barattolo" },
+        { name: "Ters", unit: "Conf" },
+        { name: "Alcool", unit: "Conf" },
+        { name: "Sapone per mani", unit: "Conf" },
+        { name: "Viakal", unit: "Conf" },
+        { name: "Prodotti Vetri", unit: "Conf" },
+        { name: "Smac Bagno", unit: "Conf" },
+        { name: "Ajax (Pavimenti)", unit: "Conf" },
+        { name: "Stracci Scaffali", unit: "Pz" },
+        { name: "Svelto", unit: "Conf" },
+        { name: "W.C. Bagno", unit: "Conf" },
+        { name: "Candeggina", unit: "Conf" },
+        { name: "Sgrassatore", unit: "Conf" },
+        { name: "Smac Acciaio", unit: "Conf" },
+        { name: "Scope Minerva", unit: "Pz" },
+        { name: "Bastone per scopa", unit: "Pz" },
+        { name: "Spugna Piatti", unit: "Pz" },
+        { name: "Stracci Pavimenti", unit: "Pz" },
+        { name: "Buste Spazzatura Grandi", unit: "Conf" },
+        { name: "Buste per Impasto", unit: "Conf" },
+        { name: "Buste Spazzature Piccole", unit: "Conf" },
+        { name: "Carta Igienica", unit: "Conf" },
+        { name: "Buste pan Grattato", unit: "Conf" },
+        { name: "Barattoli Scarola", unit: "Pz" },
+        { name: "Biglietti da visita", unit: "Pz" },
+        { name: "Gocce di cioccolato", unit: "Kg" },
+        { name: "Prosciutto Cotto", unit: "Conf" },
+        { name: "Mostacciuoli Rhum", unit: "Conf" },
+        { name: "Mostacciuoli Classici", unit: "Conf" },
+        { name: "Spray Insetticida", unit: "Bombola" }
+    ];
+
+    /**
+     * Funzione per mostrare messaggi (simula un alert in modo non bloccante)
+     * @param {string} message Il messaggio da mostrare
+     * @param {string} type 'success' o 'error'
+     */
+    function showMessage(message, type = 'success') {
+        const msgBox = document.getElementById('message-box');
+        msgBox.textContent = message;
+        msgBox.className = `fixed top-4 right-4 p-3 text-white rounded-lg shadow-xl transition duration-300 ${type === 'success' ? 'bg-primary' : 'bg-red-500'} z-50`;
+        msgBox.style.display = 'block';
+
+        // Nasconde il messaggio dopo 3 secondi
+        setTimeout(() => {
+            msgBox.style.display = 'none';
+        }, 3000);
+    }
+
+    /**
+     * Inizializzazione Firebase
+     */
+    async function initializeFirebase() {
+        if (firebaseConfig) {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Autenticazione: usa token personalizzato se disponibile, altrimenti anonima
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Ottieni l'ID utente dopo l'autenticazione
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        // Avvia il listener di Firestore una volta che l'utente è autenticato
+                        startFirestoreListener();
+                    } else {
+                        userId = null;
+                        showMessage("Errore: Autenticazione Firebase fallita.", 'error');
+                    }
+                });
+            } catch (e) {
+                console.error("Errore di inizializzazione Firebase:", e);
+                showMessage("Errore critico: Impossibile connettersi al database.", 'error');
+            }
+        } else {
+            // Se non c'è config, usa dati di fallback (solo per sviluppo locale)
+            console.warn("Configurazione Firebase non trovata. Usando dati locali.");
+            // Inizializza i prodotti una volta se non c'è Firebase
+            currentData.products = INITIAL_PRODUCTS.map((p, index) => ({
+                id: `prod-${index}`,
+                name: p.name,
+                unit: p.unit,
+                quantity: 0
+            }));
+            renderProductList();
+        }
+    }
+
+    /**
+     * Avvia il listener di Firestore per i dati dell'utente.
+     */
+    function startFirestoreListener() {
+        if (!userId || !db) return;
+
+        // Path del documento: /artifacts/{appId}/users/{userId}/orderData/current
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'orderData', 'current');
+
+        onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                // Il documento esiste, carica i dati
+                const data = docSnap.data();
+                // Utilizza una struttura di default sicura
+                // Controlla se 'orderData' è una stringa prima di tentare il parse
+                const parsedData = typeof data.orderData === 'string' ? JSON.parse(data.orderData) : null;
+                currentData = parsedData || { products: [] };
+                
+                // Aggiorna la lista prodotti se i prodotti salvati sono minori di quelli iniziali (per aggiungere i nuovi elementi)
+                if (currentData.products.length < INITIAL_PRODUCTS.length) {
+                    // Mappa gli ID esistenti per una ricerca rapida
+                    const existingProductNames = new Set(currentData.products.map(p => p.name));
+                    
+                    // Aggiungi solo i prodotti iniziali che non esistono già nella lista salvata
+                    INITIAL_PRODUCTS.forEach((p, index) => {
+                        if (!existingProductNames.has(p.name)) {
+                             currentData.products.push({
+                                id: `prod-${index}-${Date.now()}`, // ID unico garantito
+                                name: p.name,
+                                unit: p.unit,
+                                quantity: 0
+                            });
+                        }
+                    });
+                    // Salva la lista aggiornata per includere i nuovi prodotti
+                    saveOrderData();
+                }
+
+            } else {
+                // Il documento non esiste, inizializza con i prodotti di base
+                console.log("Nessun dato trovato, inizializzo il database.");
+                initializeOrderData();
+            }
+            renderProductList();
+        }, (error) => {
+            console.error("Errore di onSnapshot:", error);
+            showMessage("Errore nel caricamento dei dati in tempo reale.", 'error');
+        });
+    }
+
+    /**
+     * Inizializza i dati dell'ordine nel database
+     */
+    async function initializeOrderData() {
+        if (!userId || !db) return;
+
+        // Assegna ID unici ai prodotti iniziali
+        currentData.products = INITIAL_PRODUCTS.map((p, index) => ({
+            id: `prod-${index}`,
+            name: p.name,
+            unit: p.unit,
+            quantity: 0
+        }));
+
+        await saveOrderData();
+    }
+
+    /**
+     * Salva i dati dell'ordine nel database
+     */
+    async function saveOrderData() {
+        if (!userId || !db) return;
+
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'orderData', 'current');
+            await setDoc(docRef, {
+                orderData: JSON.stringify(currentData),
+                timestamp: new Date().getTime()
+            }, { merge: false });
+        } catch (e) {
+            console.error("Errore nel salvataggio dei dati:", e);
+            showMessage("Errore nel salvataggio automatico dei dati.", 'error');
+        }
+    }
+
+    /**
+     * Aggiunge un nuovo prodotto alla lista e lo salva.
+     * @param {string} name Nome del prodotto
+     * @param {string} unit Unità di misura
+     */
+    async function addNewProduct(name, unit) {
+        const newProduct = {
+            id: `custom-${Date.now()}`,
+            name: name,
+            unit: unit,
+            quantity: 0
+        };
+        currentData.products.push(newProduct);
+        await saveOrderData();
+        showMessage(`Prodotto '${name}' aggiunto.`);
+        renderProductList();
+    }
+
+    /**
+     * Modifica il nome di un prodotto esistente.
+     * @param {string} productId ID del prodotto
+     * @param {string} newName Nuovo nome del prodotto
+     */
+    async function editProductName(productId, newName) {
+        const productIndex = currentData.products.findIndex(p => p.id === productId);
+        if (productIndex !== -1) {
+            const oldName = currentData.products[productIndex].name;
+            currentData.products[productIndex].name = newName;
+            await saveOrderData();
+            showMessage(`Nome prodotto modificato da '${oldName}' a '${newName}'.`);
+            renderProductList();
+        }
+    }
+
+    // --- Logica dell'Interfaccia Utente ---
+
+    /**
+     * Renderizza la lista dei prodotti nell'interfaccia.
+     */
+    function renderProductList() {
+        const listContainer = document.getElementById('product-list');
+        listContainer.innerHTML = ''; // Pulisce la lista
+
+        if (currentData.products.length === 0) {
+            listContainer.innerHTML = '<p class="text-gray-500 text-center mt-8">Nessun prodotto disponibile. Aggiungine uno per iniziare.</p>';
+            return;
+        }
+
+        // Ordina i prodotti per nome
+        const sortedProducts = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
+
+        sortedProducts.forEach(product => {
+            const isActive = activeInputId === product.id;
+            const item = document.createElement('div');
+            item.className = `p-3 flex justify-between items-center rounded-lg shadow-sm border ${isActive ? 'bg-green-50 border-primary' : 'bg-white border-gray-200'} transition duration-150`;
+            item.dataset.productId = product.id;
+            item.dataset.productName = product.name;
+
+            item.innerHTML = `
+                <div class="flex-1 min-w-0 mr-2">
+                    <div class="flex items-center space-x-2">
+                        <p class="text-sm font-medium text-gray-800 truncate">${product.name}</p>
+                        <button class="edit-btn text-edit hover:text-blue-600 text-base leading-none" data-product-id="${product.id}" data-product-name="${product.name}" title="Modifica Nome">
+                            &#9999;&#xFE0F; <!-- Emoji matita -->
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">${product.unit}</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input
+                        type="text"
+                        readonly
+                        value="${product.quantity}"
+                        data-product-id="${product.id}"
+                        class="quantity-input w-16 text-center text-lg font-bold p-1 rounded-md border-2 focus:outline-none ${isActive ? 'border-primary input-active' : 'border-gray-300'}"
+                    >
+                    <button class="remove-btn text-red-400 hover:text-red-600 text-2xl font-light leading-none" data-product-id="${product.id}" title="Azzera o Rimuovi">
+                        &times;
+                    </button>
+                </div>
+            `;
+            listContainer.appendChild(item);
+        });
+
+        // Applica i listener ai nuovi elementi di input
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('click', handleInputFocus);
+        });
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', handleEditProductModal);
+        });
+        document.querySelectorAll('.remove-btn').forEach(button => {
+            button.addEventListener('click', handleRemoveProduct);
+        });
+    }
+
+    /**
+     * Gestisce il focus sull'input del prodotto.
+     * @param {Event} e L'evento click
+     */
+    function handleInputFocus(e) {
+        // Rimuovi la classe 'input-active' da tutti gli input
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.classList.remove('input-active');
+            input.closest('[data-product-id]').classList.remove('bg-green-50', 'border-primary');
+        });
+
+        const input = e.target;
+        activeInputId = input.dataset.productId;
+        currentQuantityInput = String(input.value) === '0' ? '' : String(input.value);
+
+        // Aggiungi la classe 'input-active' all'input selezionato e al suo contenitore
+        input.classList.add('input-active');
+        input.closest('[data-product-id]').classList.add('bg-green-50', 'border-primary');
+
+        updateCurrentQuantityDisplay();
+    }
+
+    /**
+     * Aggiorna il display della quantità nella tastiera.
+     */
+    function updateCurrentQuantityDisplay() {
+        const display = document.getElementById('current-quantity');
+        display.textContent = currentQuantityInput || '0';
+    }
+
+    /**
+     * Gestisce i click sui tasti della tastiera.
+     * @param {Event} e L'evento click
+     */
+    function handleKeyClick(e) {
+        const key = e.target.dataset.key;
+        if (!key) return;
+
+        if (key >= '0' && key <= '9') {
+            if (currentQuantityInput.length < 5) { // Limita a 5 cifre
+                currentQuantityInput += key;
+            }
+        } else if (key === 'BACK') {
+            currentQuantityInput = currentQuantityInput.slice(0, -1);
+        } else if (key === 'RESET_INPUT') {
+            currentQuantityInput = '';
+        } else if (key === 'CLEAR') {
+            if (activeInputId) {
+                applyQuantity(0);
+                currentQuantityInput = '';
+            }
+        } else if (key === 'APPLY') {
+            const quantity = currentQuantityInput === '' ? 0 : parseInt(currentQuantityInput);
+            applyQuantity(quantity);
+            // Non azzerare l'input dopo l'applicazione per l'inserimento rapido
+        }
+
+        updateCurrentQuantityDisplay();
+    }
+
+    /**
+     * Applica la quantità all'input attivo e salva nel database.
+     * @param {number} quantity La quantità da applicare
+     */
+    async function applyQuantity(quantity) {
+        if (!activeInputId) {
+            showMessage("Seleziona un prodotto prima di applicare la quantità.", 'error');
+            return;
+        }
+
+        const productIndex = currentData.products.findIndex(p => p.id === activeInputId);
+        if (productIndex !== -1) {
+            currentData.products[productIndex].quantity = quantity;
+
+            // Aggiorna l'input nella UI in tempo reale
+            const activeInput = document.querySelector(`.quantity-input[data-product-id="${activeInputId}"]`);
+            if (activeInput) {
+                activeInput.value = quantity;
+            }
+
+            // Imposta l'input della tastiera al valore appena applicato per continuare a modificare
+            currentQuantityInput = String(quantity);
+
+            await saveOrderData();
+        }
+    }
+
+    /**
+     * Genera la stringa di riepilogo per la copia.
+     * @returns {string} Il riepilogo formattato
+     */
+    function generateSummaryText() {
+        const title = document.getElementById('header-title').textContent;
+
+        let summary = `*** ORDINE ${title.toUpperCase()} (${new Date().toLocaleDateString()}) ***\n\n`;
+
+        // Filtra e ordina solo i prodotti con quantità > 0 per la sezione principale
+        const orderedItems = currentData.products
+            .filter(p => p.quantity > 0)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (orderedItems.length > 0) {
+            summary += "--- PRODOTTI DA ORDINARE ---\n";
+            const maxNameLength = orderedItems.reduce((max, p) => Math.max(max, `${p.name} (${p.unit})`.length), 0);
+            
+            orderedItems.forEach(p => {
+                const nameWithUnit = `${p.name} (${p.unit})`;
+                const padding = ' '.repeat(Math.max(0, maxNameLength - nameWithUnit.length + 2)); // +2 per spaziatura
+                // Formato: Nome (Unità) | Quantità
+                summary += `${nameWithUnit}${padding} | ${p.quantity}\n`;
+            });
+            summary += "\n";
+        } else {
+             summary += "--- NESSUN PRODOTTO SELEZIONATO ---\n\n";
+        }
+
+        // Lista completa (anche quantità 0) - Mostrata in una singola colonna nel testo puro
+        summary += "--- LISTA COMPLETA (TUTTI I PRODOTTI) ---\n";
+        const allItems = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
+        const maxNameLengthAll = allItems.reduce((max, p) => Math.max(max, p.name.length), 0);
+
+        allItems.forEach(p => {
+            const padding = ' '.repeat(Math.max(0, maxNameLengthAll - p.name.length + 2));
+            // Formato: Nome | Quantità
+            summary += `${p.name}${padding} | ${p.quantity}\n`;
+        });
+
+        return summary;
+    }
+
+    /**
+     * Renderizza il riepilogo nella vista dedicata.
+     */
+    function renderSummaryView() {
+        const summaryContentDiv = document.getElementById('summary-content');
+        const summaryTitleSpan = document.getElementById('summary-title');
+        const summaryTitle = document.getElementById('header-title').textContent;
+
+        summaryTitleSpan.textContent = summaryTitle;
+
+        // Ordina tutti i prodotti alfabeticamente
+        const allItems = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
+        const totalItems = allItems.length;
+        
+        // Calcola la divisione per avere colonne bilanciate
+        const halfLength = Math.ceil(totalItems / 2);
+        const col1Items = allItems.slice(0, halfLength);
+        const col2Items = allItems.slice(halfLength);
+
+        let htmlContent = '';
+
+        // Contenuto per i prodotti con quantità > 0
+        const orderedItems = allItems.filter(p => p.quantity > 0);
+        
+        if (orderedItems.length > 0) {
+             htmlContent += `<p class="font-bold border-b pb-1 mb-2 col-span-2 text-base text-primary">PRODOTTI DA ORDINARE</p>`;
+             orderedItems.forEach(p => {
+                 // Nome a sinistra, Quantità a destra
+                 htmlContent += `<div class="flex justify-between col-span-2 border-b border-gray-100 pb-0.5">
+                    <span class="text-gray-600 truncate">${p.name} (${p.unit})</span>
+                    <span class="font-bold text-gray-800">${p.quantity} x</span>
+                </div>`;
+             });
+        }
+        
+        // Inizia la sezione LISTA COMPLETA
+        htmlContent += `<p class="font-bold border-t pt-4 mt-2 col-span-2 text-base text-gray-700">LISTA COMPLETA (Quantità 0 incluse)</p>`;
+
+        // Usa un layout a griglia per le due colonne
+        htmlContent += `<div class="grid grid-cols-2 gap-x-4 gap-y-1 w-full mt-2">`;
+        
+        // Loop per popolare entrambe le colonne (simulando l'allineamento)
+        for (let i = 0; i < halfLength; i++) {
+            const item1 = col1Items[i];
+            const item2 = col2Items[i];
+            
+            // Colonna 1 (a sinistra)
+            // Nome a sinistra, Quantità a destra
+            htmlContent += `
+                <div class="flex justify-between items-start space-x-2">
+                    <span class="text-gray-600 truncate">${item1.name}</span>
+                    <span class="font-bold text-gray-800">${item1.quantity}</span>
+                </div>
+            `;
+            
+            // Colonna 2 (a destra, se esiste)
+            if (item2) {
+                 // Nome a sinistra, Quantità a destra
+                htmlContent += `
+                    <div class="flex justify-between items-start space-x-2">
+                        <span class="text-gray-600 truncate">${item2.name}</span>
+                        <span class="font-bold text-gray-800">${item2.quantity}</span>
+                    </div>
+                `;
+            } else {
+                // Aggiunge un div vuoto per mantenere la struttura della griglia se la seconda colonna è più corta
+                htmlContent += `<div></div>`;
+            }
+        }
+        
+        htmlContent += `</div>`; // Chiude grid
+
+        // Applica i contenuti e il font minimo
+        summaryContentDiv.innerHTML = htmlContent;
+        summaryContentDiv.className = 'text-xs'; // Imposta il font al minimo
+    }
+
+    /**
+     * Gestisce l'apertura della modale di modifica.
+     * @param {Event} e L'evento click
+     */
+    function handleEditProductModal(e) {
+        const productId = e.currentTarget.dataset.productId;
+        const productName = e.currentTarget.dataset.productName;
+
+        document.getElementById('edit-product-id').value = productId;
+        document.getElementById('edit-product-name').value = productName;
+        document.getElementById('edit-product-modal').classList.remove('hidden');
+    }
+
+
+    /**
+     * Gestisce la rimozione di un prodotto personalizzato o l'azzeramento di un prodotto di default.
+     * @param {Event} e L'evento click
+     */
+    async function handleRemoveProduct(e) {
+        const productId = e.currentTarget.dataset.productId;
+        const product = currentData.products.find(p => p.id === productId);
+
+        if (!product) return;
+
+        // I prodotti iniziali (ID che inizia con 'prod-') non possono essere rimossi, solo azzerati.
+        // Se un ID non inizia con 'custom-', consideralo di default/non rimovibile.
+        if (!productId.startsWith('custom-')) {
+            product.quantity = 0;
+            await saveOrderData();
+            showMessage(`Quantità di '${product.name}' azzerata.`);
+            return;
+        }
+
+        // Rimuovi i prodotti personalizzati (ID che inizia con 'custom-')
+        const productName = product.name;
+        currentData.products = currentData.products.filter(p => p.id !== productId);
+        await saveOrderData();
+        showMessage(`Prodotto '${productName}' rimosso.`);
+    }
+
+    // --- Inizializzazione e Listeners Principali ---
+
+    window.onload = function() {
+        initializeFirebase();
+
+        // 1. Listener Tastiera Numerica
+        document.getElementById('keyboard').addEventListener('click', handleKeyClick);
+
+        // 2. Listener Selezione Titolo
+        document.getElementById('title-selector').addEventListener('change', (e) => {
+            document.getElementById('header-title').textContent = e.target.value;
+            // Aggiorna anche il titolo del riepilogo se è aperto
+            document.getElementById('summary-title').textContent = e.target.value;
+        });
+
+        // 3. Gestione Modal/View Riepilogo
+        const summaryView = document.getElementById('summary-view');
+        document.getElementById('show-summary-btn').addEventListener('click', () => {
+            renderSummaryView();
+            summaryView.classList.remove('translate-x-full');
+        });
+        document.getElementById('close-summary-btn').addEventListener('click', () => {
+            summaryView.classList.add('translate-x-full');
+        });
+
+        // 4. Funzione Copia Riepilogo
+        document.getElementById('copy-summary-btn').addEventListener('click', () => {
+            const summaryText = generateSummaryText();
+            const copyMessage = document.getElementById('copy-message');
+
+            // Usa document.execCommand('copy') come fallback per ambienti iframe
+            const textarea = document.createElement('textarea');
+            textarea.value = summaryText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    copyMessage.textContent = "Copiato negli appunti!";
+                    copyMessage.classList.remove('hidden');
+                    setTimeout(() => copyMessage.classList.add('hidden'), 2000);
+                } else {
+                    showMessage("Errore copia: Funzione non supportata.", 'error');
+                }
+            } catch (err) {
+                showMessage("Errore copia: Funzione non supportata.", 'error');
+            }
+            document.body.removeChild(textarea);
+        });
+
+        // 5. Gestione Modal Aggiungi Prodotto
+        const addModal = document.getElementById('add-product-modal');
+        document.getElementById('add-product-btn').addEventListener('click', () => {
+            addModal.classList.remove('hidden');
+        });
+        document.getElementById('cancel-add-btn').addEventListener('click', () => {
+            addModal.classList.add('hidden');
+            document.getElementById('new-product-name').value = '';
+            document.getElementById('new-product-unit').value = '';
+        });
+        document.getElementById('save-new-product-btn').addEventListener('click', () => {
+            const name = document.getElementById('new-product-name').value.trim();
+            const unit = document.getElementById('new-product-unit').value.trim();
+
+            if (name && unit) {
+                addNewProduct(name, unit);
+                addModal.classList.add('hidden');
+                document.getElementById('new-product-name').value = '';
+                document.getElementById('new-product-unit').value = '';
+            } else {
+                showMessage("Nome e Unità sono obbligatori.", 'error');
+            }
+        });
+        
+        // 6. Gestione Modal Modifica Prodotto
+        const editModal = document.getElementById('edit-product-modal');
+        document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+            editModal.classList.add('hidden');
+        });
+        document.getElementById('save-edit-btn').addEventListener('click', () => {
+            const productId = document.getElementById('edit-product-id').value;
+            const newName = document.getElementById('edit-product-name').value.trim();
+            
+            if (newName) {
+                editProductName(productId, newName);
+                editModal.classList.add('hidden');
+            } else {
+                showMessage("Il nome del prodotto non può essere vuoto.", 'error');
+            }
+        });
+    }
+
+</script>
+
+</body>
+</html>
