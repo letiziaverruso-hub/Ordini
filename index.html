@@ -44,11 +44,6 @@
         .input-active {
             @apply ring-4 ring-primary ring-opacity-50;
         }
-        /* La classe summary-column è usata per simulare la divisione nel display, anche se la logica è JS */
-        .summary-column {
-            display: flex;
-            flex-wrap: wrap;
-        }
     </style>
 </head>
 <body class="selection:bg-primary selection:text-white">
@@ -75,9 +70,9 @@
         </header>
 
         <!-- 2. Main Content: Lista Prodotti -->
-        <main id="main-list-view" class="flex-1 overflow-y-auto p-4 space-y-2">
-            <!-- La lista dei prodotti verrà popolata qui -->
-            <div id="product-list" class="space-y-1"></div>
+        <main id="main-list-view" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- La lista dei prodotti verrà popolata qui, divisa per categorie -->
+            <div id="product-list" class="space-y-4"></div>
         </main>
 
         <!-- 3. Tastiera Numerica (Fixed at bottom) -->
@@ -126,7 +121,11 @@
             <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
                 <h3 class="text-lg font-bold mb-4">Aggiungi Nuovo Prodotto</h3>
                 <input type="text" id="new-product-name" placeholder="Nome Prodotto (es: Nuovo Biscotto)" class="w-full p-2 border border-gray-300 rounded-md mb-3 focus:ring-primary focus:border-primary">
-                <input type="text" id="new-product-unit" placeholder="Unità (es: Pz, Conf, Kg)" class="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-primary focus:border-primary">
+                <input type="text" id="new-product-unit" placeholder="Unità (es: Pz, Conf, Kg)" class="w-full p-2 border border-gray-300 rounded-md mb-3 focus:ring-primary focus:border-primary">
+                <select id="new-product-category" class="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-primary focus:border-primary">
+                    <option value="">Seleziona Categoria</option>
+                    <!-- Le opzioni della categoria saranno aggiunte da JS -->
+                </select>
                 <div class="flex justify-end space-x-3">
                     <button id="cancel-add-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 rounded-md">Annulla</button>
                     <button id="save-new-product-btn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-green-600">Salva</button>
@@ -189,122 +188,160 @@
     }
     // Fine Inizializzazione sicura
 
-    // Lista iniziale dei prodotti basata sulla lista corretta fornita dall'utente.
+    // Categorie definite (AGGIORNATE in base alla modifica dell'utente)
+    const CATEGORIES = {
+        'congelati': "1. Congelati",
+        'scaffali': "2. Scaffali",
+        'materie_prime': "4. Materie Prime (Farine & Ingredienti Base)",
+        'conserve_marmellate': "7. Conserve & Marmellate",
+        'bevande': "8. Bevande (Acque, Bibite, Birre)",
+        'natale': "9. Natale",
+        'confezionamento_buste': "10. Confezionamento & Buste",
+        'cancelleria_varie': "11. Cancelleria & Varie",
+        'mieli': "12. Miele",
+        'detergenti_pulizia': "13. Detergenti & Pulizia",
+        'strumenti_attrezzature': "14. Strumenti & Attrezzature",
+        'altro': "15. Altro/Personalizzati"
+    };
+
+    // Lista iniziale dei prodotti (AGGIORNATA in base alla modifica dell'utente)
     const INITIAL_PRODUCTS = [
-        { name: "Pizza Parigina", unit: "Teglie" },
-        { name: "Foc. Scarola", unit: "Pz" },
-        { name: "Cornetti crema", unit: "Pz" },
-        { name: "Fagottino", unit: "Pz" },
-        { name: "Cornetto Vuoto", unit: "Pz" },
-        { name: "Ciambelle", unit: "Pz" },
-        { name: "Rustici Grandi", unit: "Pz" },
-        { name: "Rustici Mignon", unit: "Pz" },
-        { name: "Mollica", unit: "Kg" },
-        { name: "Biscotta Bianca", unit: "Pacco" },
-        { name: "Biscotta Integrale", unit: "Pacco" },
-        { name: "Fresella Bianca", unit: "Pacco" },
-        { name: "Fresella Integrale", unit: "Pacco" },
-        { name: "Fresella Tonda Bianca", unit: "Pacco" },
-        { name: "Fresella Tonda Integrale", unit: "Pacco" },
-        { name: "Pastarelle Bianche", unit: "Pacco" },
-        { name: "Pastarelle al Cacao", unit: "Pacco" },
-        { name: "Pastarelle al Cacao Morbide", unit: "Pacco" },
-        { name: "Pastarelle Mandorlate", unit: "Pacco" },
-        { name: "Taralli al finocchietto", unit: "Pacco" },
-        { name: "Taralli Extravergine", unit: "Pacco" },
-        { name: "Taralli Integrali", unit: "Pacco" },
-        { name: "Pan Grattato", unit: "Pacco" },
-        { name: "Crostini Proteici", unit: "Pacco" },
-        { name: "Taralli Mergellina", unit: "Kg" },
-        { name: "Treccine", unit: "Pz" },
-        { name: "Torcetti al burro", unit: "Pacco" },
-        { name: "Ciambelline al vino rosso", unit: "Pacco" },
-        { name: "Novellini", unit: "Pacco" },
-        { name: "Carbonelle", unit: "CRT" },
-        { name: "Farina tipo “00“", unit: "Kg" },
-        { name: "Farina grano duro", unit: "Kg" },
-        { name: "Farina Integrale", unit: "Kg" },
-        { name: "Farina di Mais", unit: "Kg" },
-        { name: "Mozzarella", unit: "Pz" },
-        { name: "Uova", unit: "Conf" },
-        { name: "Olio di semi girasole", unit: "Litro" },
-        { name: "Olio extravergine di oliva", unit: "Conf" },
-        { name: "zucchero semolato", unit: "Kg" },
-        { name: "Lievito pan degli angeli", unit: "Conf" },
-        { name: "Marmellata frutti di bosco", unit: "Conf" },
-        { name: "Marmellata albicocche", unit: "Conf" },
-        { name: "Marmellata ciliegie", unit: "Conf" },
-        { name: "Acqua L 1.5 liscia", unit: "Conf" },
-        { name: "Acqua L 0.5 liscia", unit: "Conf" },
-        { name: "Acqua L 1.5 frizzante", unit: "Conf" },
-        { name: "Acqua L 0.5 frizzante", unit: "Conf" },
-        { name: "Coca-Cola Lattina", unit: "Conf" },
-        { name: "Coca-Cola L 1.5", unit: "Conf" },
-        { name: "Esta the limone", unit: "Conf" },
-        { name: "Esta the pesca", unit: "Conf" },
-        { name: "Ceres", unit: "Conf" },
-        { name: "Fanta", unit: "Conf" },
-        { name: "Sugo", unit: "Conf" },
-        { name: "Stampi plum-cake", unit: "Pz" },
-        { name: "Nutella", unit: "Barattolo" },
-        { name: "Carta Forno", unit: "Rotolo" },
-        { name: "Stampi Rotondi", unit: "Pz" },
-        { name: "Shopperini", unit: "Kg" },
-        { name: "Sacchetti carta Filone", unit: "Kg" },
-        { name: "Sacchetti carta Panello", unit: "Kg" },
-        { name: "Sacchetti carta 1/2 kg", unit: "Kg" },
-        { name: "Sacchetti carta Scanata", unit: "Kg" },
-        { name: "Sacchetti Cornetti", unit: "Kg" },
-        { name: "Carta finissima", unit: "Kg" },
-        { name: "Carta Intestata", unit: "Pz" },
-        { name: "Guanti Pane", unit: "Conf" },
-        { name: "Tovagliolini", unit: "Conf" },
-        { name: "Vassoi fondo oro", unit: "Pz" },
-        { name: "Sovrainvolto Avana", unit: "Pz" },
-        { name: "Cartoni pizza Grandi", unit: "Pz" },
-        { name: "Cartoni pizza Piccoli", unit: "Pz" },
-        { name: "Rotoli reg. cassa", unit: "Rotolo" },
-        { name: "Guanti Monouso", unit: "Conf" },
-        { name: "Scotch piccolo", unit: "Pz" },
-        { name: "Scotch grande", unit: "Pz" },
-        { name: "Pennarelli", unit: "Pz" },
-        { name: "Miele cf 50 gr.", unit: "Barattolo" },
-        { name: "Miele Acacia", unit: "Barattolo" },
-        { name: "Miele Castagno", unit: "Barattolo" },
-        { name: "Miele Millefiori", unit: "Barattolo" },
-        { name: "Miele Eucalipto", unit: "Barattolo" },
-        { name: "Miele di Sulla", unit: "Barattolo" },
-        { name: "Miele Melata di Bosco", unit: "Barattolo" },
-        { name: "Ters", unit: "Conf" },
-        { name: "Alcool", unit: "Conf" },
-        { name: "Sapone per mani", unit: "Conf" },
-        { name: "Viakal", unit: "Conf" },
-        { name: "Prodotti Vetri", unit: "Conf" },
-        { name: "Smac Bagno", unit: "Conf" },
-        { name: "Ajax (Pavimenti)", unit: "Conf" },
-        { name: "Stracci Scaffali", unit: "Pz" },
-        { name: "Svelto", unit: "Conf" },
-        { name: "W.C. Bagno", unit: "Conf" },
-        { name: "Candeggina", unit: "Conf" },
-        { name: "Sgrassatore", unit: "Conf" },
-        { name: "Smac Acciaio", unit: "Conf" },
-        { name: "Scope Minerva", unit: "Pz" },
-        { name: "Bastone per scopa", unit: "Pz" },
-        { name: "Spugna Piatti", unit: "Pz" },
-        { name: "Stracci Pavimenti", unit: "Pz" },
-        { name: "Buste Spazzatura Grandi", unit: "Conf" },
-        { name: "Buste per Impasto", unit: "Conf" },
-        { name: "Buste Spazzature Piccole", unit: "Conf" },
-        { name: "Carta Igienica", unit: "Conf" },
-        { name: "Buste pan Grattato", unit: "Conf" },
-        { name: "Barattoli Scarola", unit: "Pz" },
-        { name: "Biglietti da visita", unit: "Pz" },
-        { name: "Gocce di cioccolato", unit: "Kg" },
-        { name: "Prosciutto Cotto", unit: "Conf" },
-        { name: "Mostacciuoli Rhum", unit: "Conf" },
-        { name: "Mostacciuoli Classici", unit: "Conf" },
-        { name: "Spray Insetticida", unit: "Bombola" }
+        // 1. Congelati
+        { name: "Pizza Parigina", unit: "Teglie", category: "congelati" },
+        { name: "Foc. Scarola", unit: "Pz", category: "congelati" },
+        { name: "Cornetti crema", unit: "Pz", category: "congelati" },
+        { name: "Fagottino", unit: "Pz", category: "congelati" },
+        { name: "Cornetto Vuoto", unit: "Pz", category: "congelati" },
+        { name: "Ciambelle", unit: "Pz", category: "congelati" },
+        { name: "Rustici Grandi", unit: "Pz", category: "congelati" },
+        { name: "Rustici Mignon", unit: "Pz", category: "congelati" },
+
+        // 2. Scaffali
+        { name: "Biscotta Bianca", unit: "Pacco", category: "scaffali" },
+        { name: "Biscotta Integrale", unit: "Pacco", category: "scaffali" },
+        { name: "Fresella Bianca", unit: "Pacco", category: "scaffali" },
+        { name: "Fresella Integrale", unit: "Pacco", category: "scaffali" },
+        { name: "Fresella Tonda Bianca", unit: "Pacco", category: "scaffali" },
+        { name: "Fresella Tonda Integrale", unit: "Pacco", category: "scaffali" },
+        { name: "Pastarelle Bianche", unit: "Pacco", category: "scaffali" },
+        { name: "Pastarelle al Cacao", unit: "Pacco", category: "scaffali" },
+        { name: "Pastarelle al Cacao Morbide", unit: "Pacco", category: "scaffali" },
+        { name: "Pastarelle Mandorlate", unit: "Pacco", category: "scaffali" },
+        { name: "Novellini", unit: "Pacco", category: "scaffali" },
+        { name: "Torcetti al burro", unit: "Pacco", category: "scaffali" },
+        { name: "Ciambelline al vino rosso", unit: "Pacco", category: "scaffali" },
+        { name: "Taralli al finocchietto", unit: "Pacco", category: "scaffali" },
+        { name: "Taralli Extravergine", unit: "Pacco", category: "scaffali" },
+        { name: "Taralli Integrali", unit: "Pacco", category: "scaffali" },
+        { name: "Crostini Proteici", unit: "Pacco", category: "scaffali" },
+        { name: "Carbonelle", unit: "CRT", category: "scaffali" },
+        { name: "Farina tipo \"00\"", unit: "Kg", category: "scaffali" },
+        { name: "Farina grano duro", unit: "Kg", category: "scaffali" },
+        { name: "Farina Integrale", unit: "Kg", category: "scaffali" },
+        { name: "Farina di Mais", unit: "Kg", category: "scaffali" },
+        { name: "Pan Grattato", unit: "Pacco", category: "scaffali" },
+        { name: "Mollica", unit: "Conf", category: "scaffali" },
+        { name: "Uova", unit: "Conf", category: "scaffali" },
+        { name: "Treccine", unit: "kg", category: "scaffali" },
+        { name: "Taralli Mergellina", unit: "kg", category: "scaffali" },
+
+        // 4. Materie Prime (Farine & Ingredienti Base)
+        { name: "zucchero semolato", unit: "Kg", category: "materie_prime" },
+        { name: "Lievito pan degli angeli", unit: "Conf", category: "materie_prime" },
+        { name: "Gocce di cioccolato", unit: "Kg", category: "materie_prime" },
+        { name: "Mozzarella", unit: "Pz", category: "materie_prime" },
+        { name: "Prosciutto Cotto", unit: "Conf", category: "materie_prime" },
+        { name: "Olio di semi girasole", unit: "Litro", category: "materie_prime" },
+        { name: "Olio extravergine di oliva", unit: "Conf", category: "materie_prime" },
+        { name: "Barattoli Scarola", unit: "Pz", category: "materie_prime" },
+
+        // 7. Conserve & Marmellate
+        { name: "Marmellata frutti di bosco", unit: "Conf", category: "conserve_marmellate" },
+        { name: "Marmellata albicocche", unit: "Conf", category: "conserve_marmellate" },
+        { name: "Marmellata ciliegie", unit: "Conf", category: "conserve_marmellate" },
+        { name: "Sugo", unit: "Conf", category: "conserve_marmellate" },
+        { name: "Nutella", unit: "Barattolo", category: "conserve_marmellate" },
+
+        // 8. Bevande (Acque, Bibite, Birre)
+        { name: "Acqua L 1.5 liscia", unit: "Conf", category: "bevande" },
+        { name: "Acqua L 0.5 liscia", unit: "Conf", category: "bevande" },
+        { name: "Acqua L 1.5 frizzante", unit: "Conf", category: "bevande" },
+        { name: "Acqua L 0.5 frizzante", unit: "Conf", category: "bevande" },
+        { name: "Coca-Cola Lattina", unit: "Conf", category: "bevande" },
+        { name: "Coca-Cola L 1.5", unit: "Conf", category: "bevande" },
+        { name: "Esta the limone", unit: "Conf", category: "bevande" },
+        { name: "Esta the pesca", unit: "Conf", category: "bevande" },
+        { name: "Ceres", unit: "Conf", category: "bevande" },
+        { name: "Fanta", unit: "Conf", category: "bevande" },
+
+        // 9. Natale
+        { name: "Mostacciuoli Rhum", unit: "Conf", category: "natale" },
+        { name: "Mostacciuoli Classici", unit: "Conf", category: "natale" },
+
+        // 10. Confezionamento & Buste
+        { name: "Carta Forno", unit: "Rotolo", category: "confezionamento_buste" },
+        { name: "Shopperini", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Sacchetti carta Filone", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Sacchetti carta Panello", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Sacchetti carta 1/2 kg", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Sacchetti carta Scanata", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Sacchetti Cornetti", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Carta finissima", unit: "Kg", category: "confezionamento_buste" },
+        { name: "Vassoi fondo oro", unit: "Pz", category: "confezionamento_buste" },
+        { name: "Sovrainvolto Avana", unit: "Pz", category: "confezionamento_buste" },
+        { name: "Cartoni pizza Grandi", unit: "Pz", category: "confezionamento_buste" },
+        { name: "Cartoni pizza Piccoli", unit: "Pz", category: "confezionamento_buste" },
+        { name: "Buste Spazzatura Grandi", unit: "Conf", category: "confezionamento_buste" },
+        { name: "Buste per Impasto", unit: "Conf", category: "confezionamento_buste" },
+        { name: "Buste Spazzature Piccole", unit: "Conf", category: "confezionamento_buste" },
+        { name: "Buste pan Grattato", unit: "Conf", category: "confezionamento_buste" },
+        { name: "Carta Intestata", unit: "Pz", category: "confezionamento_buste" },
+
+        // 11. Cancelleria & Varie
+        { name: "Rotoli reg. cassa", unit: "Rotolo", category: "cancelleria_varie" },
+        { name: "Scotch piccolo", unit: "Pz", category: "cancelleria_varie" },
+        { name: "Scotch grande", unit: "Pz", category: "cancelleria_varie" },
+        { name: "Pennarelli", unit: "Pz", category: "cancelleria_varie" },
+        { name: "Biglietti da visita", unit: "Pz", category: "cancelleria_varie" },
+
+        // 12. Miele
+        { name: "Miele cf 50 gr.", unit: "Barattolo", category: "mieli" },
+        { name: "Miele Acacia", unit: "Barattolo", category: "mieli" },
+        { name: "Miele Castagno", unit: "Barattolo", category: "mieli" },
+        { name: "Miele Millefiori", unit: "Barattolo", category: "mieli" },
+        { name: "Miele Eucalipto", unit: "Barattolo", category: "mieli" },
+        { name: "Miele di Sulla", unit: "Barattolo", category: "mieli" },
+        { name: "Miele Melata di Bosco", unit: "Barattolo", category: "mieli" },
+
+        // 13. Detergenti & Pulizia
+        { name: "Ters", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Alcool", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Sapone per mani", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Viakal", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Prodotti Vetri", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Smac Bagno", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Ajax (Pavimenti)", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Svelto", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "W.C. Bagno", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Candeggina", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Sgrassatore", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Smac Acciaio", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Carta Igienica", unit: "Conf", category: "detergenti_pulizia" },
+        { name: "Stracci Scaffali", unit: "Pz", category: "detergenti_pulizia" },
+        { name: "Scope Minerva", unit: "Pz", category: "detergenti_pulizia" },
+        { name: "Bastone per scopa", unit: "Pz", category: "detergenti_pulizia" },
+        { name: "Spugna Piatti", unit: "Pz", category: "detergenti_pulizia" },
+        { name: "Stracci Pavimenti", unit: "Pz", category: "detergenti_pulizia" },
+        { name: "Spray Insetticida", unit: "Bombola", category: "detergenti_pulizia" },
+
+        // 14. Strumenti & Attrezzature
+        { name: "Stampi plum-cake", unit: "Pz", category: "strumenti_attrezzature" },
+        { name: "Stampi Rotondi", unit: "Pz", category: "strumenti_attrezzature" },
+        { name: "Guanti Pane", unit: "Conf", category: "strumenti_attrezzature" },
+        { name: "Tovagliolini", unit: "Conf", category: "strumenti_attrezzature" },
+        { name: "Guanti Monouso", unit: "Conf", category: "strumenti_attrezzature" } // Unità ripristinata a Conf
     ];
+
 
     /**
      * Funzione per mostrare messaggi (simula un alert in modo non bloccante)
@@ -363,6 +400,7 @@
                 id: `prod-${index}`,
                 name: p.name,
                 unit: p.unit,
+                category: p.category,
                 quantity: 0
             }));
             renderProductList();
@@ -382,34 +420,62 @@
             if (docSnap.exists()) {
                 // Il documento esiste, carica i dati
                 const data = docSnap.data();
-                // Utilizza una struttura di default sicura
-                // Controlla se 'orderData' è una stringa prima di tentare il parse
                 const parsedData = typeof data.orderData === 'string' ? JSON.parse(data.orderData) : null;
-                currentData = parsedData || { products: [] };
                 
-                // Aggiorna la lista prodotti se i prodotti salvati sono minori di quelli iniziali (per aggiungere i nuovi elementi)
-                if (currentData.products.length < INITIAL_PRODUCTS.length) {
-                    // Mappa gli ID esistenti per una ricerca rapida
-                    const existingProductNames = new Set(currentData.products.map(p => p.name));
-                    
-                    // Aggiungi solo i prodotti iniziali che non esistono già nella lista salvata
+                // Aggiornamento Intelligente dei Prodotti
+                if (parsedData && parsedData.products) {
+                    const existingProductsMap = new Map(parsedData.products.map(p => [p.name, p]));
+                    const updatedProducts = [];
+
+                    // 1. Mantieni i prodotti INIZIALI esistenti, aggiornandone l'ID e la categoria se necessario
                     INITIAL_PRODUCTS.forEach((p, index) => {
-                        if (!existingProductNames.has(p.name)) {
-                             currentData.products.push({
-                                id: `prod-${index}-${Date.now()}`, // ID unico garantito
+                        const existing = existingProductsMap.get(p.name);
+                        if (existing) {
+                            // Se esiste, usa la quantità salvata
+                            updatedProducts.push({
+                                ...existing,
+                                unit: p.unit, // Forza l'unità e la categoria dalla lista di base
+                                category: p.category,
+                            });
+                            existingProductsMap.delete(p.name); // Rimuovi dall'elenco di quelli da aggiungere
+                        } else {
+                            // Se nuovo o rientrato, aggiungi con quantità 0
+                            updatedProducts.push({
+                                id: `prod-${index}-${Date.now()}`,
                                 name: p.name,
                                 unit: p.unit,
+                                category: p.category,
                                 quantity: 0
                             });
                         }
                     });
-                    // Salva la lista aggiornata per includere i nuovi prodotti
-                    saveOrderData();
-                }
 
+                    // 2. Aggiungi i prodotti PERSONALIZZATI che non sono stati eliminati
+                    existingProductsMap.forEach(product => {
+                        // Aggiungi solo i prodotti personalizzati (non della lista iniziale)
+                        if (product.id.startsWith('custom-')) {
+                            updatedProducts.push(product);
+                        }
+                    });
+                    
+                    currentData.products = updatedProducts;
+                } else {
+                    // Se i dati salvati sono vuoti o rotti, reinizializza
+                     currentData.products = INITIAL_PRODUCTS.map((p, index) => ({
+                        id: `prod-${index}`,
+                        name: p.name,
+                        unit: p.unit,
+                        category: p.category,
+                        quantity: 0
+                    }));
+                }
+                
+                // Forza il salvataggio per sincronizzare l'ID e la categoria se la lista è cambiata
+                saveOrderData();
+                
             } else {
                 // Il documento non esiste, inizializza con i prodotti di base
-                console.log("Nessun dato trovato, inizializzo il database.");
+                console.log("Nessun dato trovato, reinizializzo il database.");
                 initializeOrderData();
             }
             renderProductList();
@@ -430,6 +496,7 @@
             id: `prod-${index}`,
             name: p.name,
             unit: p.unit,
+            category: p.category,
             quantity: 0
         }));
 
@@ -458,12 +525,14 @@
      * Aggiunge un nuovo prodotto alla lista e lo salva.
      * @param {string} name Nome del prodotto
      * @param {string} unit Unità di misura
+     * @param {string} category Categoria
      */
-    async function addNewProduct(name, unit) {
+    async function addNewProduct(name, unit, category) {
         const newProduct = {
             id: `custom-${Date.now()}`,
             name: name,
             unit: unit,
+            category: category,
             quantity: 0
         };
         currentData.products.push(newProduct);
@@ -482,6 +551,10 @@
         if (productIndex !== -1) {
             const oldName = currentData.products[productIndex].name;
             currentData.products[productIndex].name = newName;
+            
+            // Per i prodotti predefiniti (che non iniziano con 'custom-'), il nome non è la chiave di categorizzazione qui
+            // La categoria rimane quella della lista INITIAL_PRODUCTS, ma se è un prodotto personalizzato, la categoria rimane quella che l'utente ha scelto.
+            
             await saveOrderData();
             showMessage(`Nome prodotto modificato da '${oldName}' a '${newName}'.`);
             renderProductList();
@@ -491,51 +564,80 @@
     // --- Logica dell'Interfaccia Utente ---
 
     /**
-     * Renderizza la lista dei prodotti nell'interfaccia.
+     * Renderizza la lista dei prodotti nell'interfaccia, raggruppati per categoria.
      */
     function renderProductList() {
         const listContainer = document.getElementById('product-list');
-        listContainer.innerHTML = ''; // Pulisce la lista
+        listContainer.innerHTML = ''; 
 
         if (currentData.products.length === 0) {
             listContainer.innerHTML = '<p class="text-gray-500 text-center mt-8">Nessun prodotto disponibile. Aggiungine uno per iniziare.</p>';
             return;
         }
 
-        // Ordina i prodotti per nome
-        const sortedProducts = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
+        // 1. Raggruppa i prodotti per categoria
+        const productsByCategory = currentData.products.reduce((acc, product) => {
+            const categoryId = product.category || 'altro';
+            if (!acc[categoryId]) {
+                acc[categoryId] = [];
+            }
+            acc[categoryId].push(product);
+            return acc;
+        }, {});
 
-        sortedProducts.forEach(product => {
-            const isActive = activeInputId === product.id;
-            const item = document.createElement('div');
-            item.className = `p-3 flex justify-between items-center rounded-lg shadow-sm border ${isActive ? 'bg-green-50 border-primary' : 'bg-white border-gray-200'} transition duration-150`;
-            item.dataset.productId = product.id;
-            item.dataset.productName = product.name;
+        // 2. Ordina le categorie utilizzando l'ordine definito nella mappa CATEGORIES
+        const sortedCategoryIds = Object.keys(CATEGORIES).filter(id => productsByCategory[id]);
 
-            item.innerHTML = `
-                <div class="flex-1 min-w-0 mr-2">
+        // 3. Renderizza
+        sortedCategoryIds.forEach(categoryId => {
+            const categoryName = CATEGORIES[categoryId] || CATEGORIES['altro'];
+            const products = productsByCategory[categoryId].sort((a, b) => a.name.localeCompare(b.name));
+
+            // Container Categoria
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'category-group';
+            
+            // Titolo Categoria. Si attacca un po' più sotto per permettere lo scrolling completo
+            categoryDiv.innerHTML = `
+                <h2 class="text-lg font-bold text-gray-700 bg-gray-200 p-2 rounded-t-lg sticky top-20 z-10 shadow-sm">${categoryName}</h2>
+                <div class="space-y-1 pt-1"></div>
+            `;
+            const listGroup = categoryDiv.querySelector('div');
+
+            products.forEach(product => {
+                const isActive = activeInputId === product.id;
+                const isCustom = product.id.startsWith('custom-');
+                
+                const item = document.createElement('div');
+                item.className = `p-3 flex justify-between items-center rounded-lg shadow-sm border ${isActive ? 'bg-green-50 border-primary' : 'bg-white border-gray-200'} transition duration-150`;
+                item.dataset.productId = product.id;
+
+                item.innerHTML = `
+                    <div class="flex-1 min-w-0 mr-2">
+                        <div class="flex items-center space-x-2">
+                            <p class="text-sm font-medium text-gray-800 truncate">${product.name}</p>
+                            <button class="edit-btn text-edit hover:text-blue-600 text-base leading-none" data-product-id="${product.id}" data-product-name="${product.name}" title="Modifica Nome">
+                                &#9999;&#xFE0F; 
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500">${product.unit}</p>
+                    </div>
                     <div class="flex items-center space-x-2">
-                        <p class="text-sm font-medium text-gray-800 truncate">${product.name}</p>
-                        <button class="edit-btn text-edit hover:text-blue-600 text-base leading-none" data-product-id="${product.id}" data-product-name="${product.name}" title="Modifica Nome">
-                            &#9999;&#xFE0F; <!-- Emoji matita -->
+                        <input
+                            type="text"
+                            readonly
+                            value="${product.quantity}"
+                            data-product-id="${product.id}"
+                            class="quantity-input w-16 text-center text-lg font-bold p-1 rounded-md border-2 focus:outline-none ${isActive ? 'border-primary input-active' : 'border-gray-300'}"
+                        >
+                        <button class="remove-btn text-red-400 hover:text-red-600 text-2xl font-light leading-none" data-product-id="${product.id}" title="${isCustom ? 'Rimuovi' : 'Azzera'}">
+                            &times;
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500">${product.unit}</p>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <input
-                        type="text"
-                        readonly
-                        value="${product.quantity}"
-                        data-product-id="${product.id}"
-                        class="quantity-input w-16 text-center text-lg font-bold p-1 rounded-md border-2 focus:outline-none ${isActive ? 'border-primary input-active' : 'border-gray-300'}"
-                    >
-                    <button class="remove-btn text-red-400 hover:text-red-600 text-2xl font-light leading-none" data-product-id="${product.id}" title="Azzera o Rimuovi">
-                        &times;
-                    </button>
-                </div>
-            `;
-            listContainer.appendChild(item);
+                `;
+                listGroup.appendChild(item);
+            });
+            listContainer.appendChild(categoryDiv);
         });
 
         // Applica i listener ai nuovi elementi di input
@@ -645,35 +747,51 @@
         const title = document.getElementById('header-title').textContent;
 
         let summary = `*** ORDINE ${title.toUpperCase()} (${new Date().toLocaleDateString()}) ***\n\n`;
-
-        // Filtra e ordina solo i prodotti con quantità > 0 per la sezione principale
+        
+        // 1. Filtra e ordina solo i prodotti con quantità > 0 (raggruppati per categoria)
         const orderedItems = currentData.products
             .filter(p => p.quantity > 0)
             .sort((a, b) => a.name.localeCompare(b.name));
 
+        const orderedByCategory = orderedItems.reduce((acc, p) => {
+            const categoryName = CATEGORIES[p.category] || CATEGORIES['altro'];
+            if (!acc[categoryName]) { acc[categoryName] = []; }
+            acc[categoryName].push(p);
+            return acc;
+        }, {});
+
+        // Ordina le categorie per nome in base alla mappa CATEGORIES
+        const sortedCategoryNames = Object.values(CATEGORIES).filter(name => Object.keys(orderedByCategory).includes(Object.keys(CATEGORIES).find(key => CATEGORIES[key] === name)));
+
         if (orderedItems.length > 0) {
-            summary += "--- PRODOTTI DA ORDINARE ---\n";
-            const maxNameLength = orderedItems.reduce((max, p) => Math.max(max, `${p.name} (${p.unit})`.length), 0);
+            summary += "--- PRODOTTI DA ORDINARE (SOLO > 0) ---\n";
             
-            orderedItems.forEach(p => {
-                const nameWithUnit = `${p.name} (${p.unit})`;
-                const padding = ' '.repeat(Math.max(0, maxNameLength - nameWithUnit.length + 2)); // +2 per spaziatura
-                // Formato: Nome (Unità) | Quantità
-                summary += `${nameWithUnit}${padding} | ${p.quantity}\n`;
+            sortedCategoryNames.forEach(categoryName => {
+                if (orderedByCategory[categoryName]) {
+                    summary += `\n== ${categoryName} ==\n`;
+                    const products = orderedByCategory[categoryName];
+                    const maxNameLength = products.reduce((max, p) => Math.max(max, `${p.name} (${p.unit})`.length), 0);
+
+                    products.forEach(p => {
+                        const nameWithUnit = `${p.name} (${p.unit})`;
+                        const padding = ' '.repeat(Math.max(0, maxNameLength - nameWithUnit.length + 2)); 
+                        // Formato: Nome (Unità) | Quantità
+                        summary += `${nameWithUnit}${padding} | ${p.quantity}\n`;
+                    });
+                }
             });
             summary += "\n";
         } else {
              summary += "--- NESSUN PRODOTTO SELEZIONATO ---\n\n";
         }
 
-        // Lista completa (anche quantità 0) - Mostrata in una singola colonna nel testo puro
-        summary += "--- LISTA COMPLETA (TUTTI I PRODOTTI) ---\n";
+        // 2. Lista completa (tutti i prodotti, per confronto)
+        summary += "--- LISTA COMPLETA (TUTTI I PRODOTTI, con quantità) ---\n";
         const allItems = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
         const maxNameLengthAll = allItems.reduce((max, p) => Math.max(max, p.name.length), 0);
 
         allItems.forEach(p => {
             const padding = ' '.repeat(Math.max(0, maxNameLengthAll - p.name.length + 2));
-            // Formato: Nome | Quantità
             summary += `${p.name}${padding} | ${p.quantity}\n`;
         });
 
@@ -681,7 +799,7 @@
     }
 
     /**
-     * Renderizza il riepilogo nella vista dedicata.
+     * Renderizza il riepilogo nella vista dedicata, raggruppato per categoria.
      */
     function renderSummaryView() {
         const summaryContentDiv = document.getElementById('summary-content');
@@ -689,73 +807,78 @@
         const summaryTitle = document.getElementById('header-title').textContent;
 
         summaryTitleSpan.textContent = summaryTitle;
-
-        // Ordina tutti i prodotti alfabeticamente
-        const allItems = currentData.products.sort((a, b) => a.name.localeCompare(b.name));
-        const totalItems = allItems.length;
         
-        // Calcola la divisione per avere colonne bilanciate
-        const halfLength = Math.ceil(totalItems / 2);
-        const col1Items = allItems.slice(0, halfLength);
-        const col2Items = allItems.slice(halfLength);
+        // 1. Raggruppa tutti i prodotti per categoria (ordinati per nome all'interno)
+        const productsByCategory = currentData.products.reduce((acc, product) => {
+            const categoryId = product.category || 'altro';
+            if (!acc[categoryId]) {
+                acc[categoryId] = [];
+            }
+            acc[categoryId].push(product);
+            return acc;
+        }, {});
 
+        // 2. Ordina le categorie per nome in base alla mappa CATEGORIES
+        const sortedCategoryNames = Object.values(CATEGORIES).filter(name => Object.keys(productsByCategory).includes(Object.keys(CATEGORIES).find(key => CATEGORIES[key] === name)));
+        
         let htmlContent = '';
-
-        // Contenuto per i prodotti con quantità > 0
-        const orderedItems = allItems.filter(p => p.quantity > 0);
+        
+        // Sezione Prodotti da Ordinare (solo quelli > 0)
+        const orderedItems = currentData.products.filter(p => p.quantity > 0).sort((a, b) => a.name.localeCompare(b.name));
         
         if (orderedItems.length > 0) {
-             htmlContent += `<p class="font-bold border-b pb-1 mb-2 col-span-2 text-base text-primary">PRODOTTI DA ORDINARE</p>`;
+             htmlContent += `<p class="font-bold border-b pb-1 mb-3 text-base text-primary">PRODOTTI DA ORDINARE (Quantità > 0)</p>`;
              orderedItems.forEach(p => {
-                 // Nome a sinistra, Quantità a destra
-                 htmlContent += `<div class="flex justify-between col-span-2 border-b border-gray-100 pb-0.5">
-                    <span class="text-gray-600 truncate">${p.name} (${p.unit})</span>
+                 htmlContent += `<div class="flex justify-between border-b border-gray-100 pb-0.5 text-sm">
+                    <span class="text-gray-600 truncate">${p.name} <span class="text-xs text-gray-400">(${p.unit})</span></span>
                     <span class="font-bold text-gray-800">${p.quantity} x</span>
                 </div>`;
              });
+             htmlContent += `<div class="pt-4 border-t mt-4"></div>`;
+        } else {
+             htmlContent += `<p class="text-gray-500 text-center mb-4 text-sm">Nessun prodotto selezionato per l'ordine.</p>`;
         }
         
-        // Inizia la sezione LISTA COMPLETA
-        htmlContent += `<p class="font-bold border-t pt-4 mt-2 col-span-2 text-base text-gray-700">LISTA COMPLETA (Quantità 0 incluse)</p>`;
+        // Sezione Lista Completa (divisa per Categoria)
+        htmlContent += `<p class="font-bold border-t pt-4 mt-2 text-base text-gray-700">LISTA COMPLETA (Divisa per Categoria)</p>`;
+        
+        sortedCategoryNames.forEach(categoryName => {
+            const categoryId = Object.keys(CATEGORIES).find(key => CATEGORIES[key] === categoryName);
+            if (productsByCategory[categoryId]) {
+                const products = productsByCategory[categoryId].sort((a, b) => a.name.localeCompare(b.name));
+                
+                htmlContent += `<h3 class="text-sm font-semibold text-gray-600 mt-4 mb-1 border-b border-gray-300 pb-0.5">${categoryName}</h3>`;
 
-        // Usa un layout a griglia per le due colonne
-        htmlContent += `<div class="grid grid-cols-2 gap-x-4 gap-y-1 w-full mt-2">`;
-        
-        // Loop per popolare entrambe le colonne (simulando l'allineamento)
-        for (let i = 0; i < halfLength; i++) {
-            const item1 = col1Items[i];
-            const item2 = col2Items[i];
-            
-            // Colonna 1 (a sinistra)
-            // Nome a sinistra, Quantità a destra
-            htmlContent += `
-                <div class="flex justify-between items-start space-x-2">
-                    <span class="text-gray-600 truncate">${item1.name}</span>
-                    <span class="font-bold text-gray-800">${item1.quantity}</span>
-                </div>
-            `;
-            
-            // Colonna 2 (a destra, se esiste)
-            if (item2) {
-                 // Nome a sinistra, Quantità a destra
-                htmlContent += `
-                    <div class="flex justify-between items-start space-x-2">
-                        <span class="text-gray-600 truncate">${item2.name}</span>
-                        <span class="font-bold text-gray-800">${item2.quantity}</span>
-                    </div>
-                `;
-            } else {
-                // Aggiunge un div vuoto per mantenere la struttura della griglia se la seconda colonna è più corta
-                htmlContent += `<div></div>`;
+                products.forEach(p => {
+                    htmlContent += `<div class="flex justify-between pb-0.5 text-xs">
+                        <span class="text-gray-500">${p.name}</span>
+                        <span class="font-bold ${p.quantity > 0 ? 'text-red-500' : 'text-gray-400'}">${p.quantity}</span>
+                    </div>`;
+                });
             }
-        }
-        
-        htmlContent += `</div>`; // Chiude grid
+        });
+
 
         // Applica i contenuti e il font minimo
         summaryContentDiv.innerHTML = htmlContent;
-        summaryContentDiv.className = 'text-xs'; // Imposta il font al minimo
     }
+
+    /**
+     * Popola il selettore delle categorie nella modale di aggiunta prodotto.
+     */
+    function populateCategorySelector() {
+        const selector = document.getElementById('new-product-category');
+        // Rimuove l'opzione "Seleziona Categoria" se necessario
+        selector.innerHTML = '<option value="" disabled selected>Seleziona Categoria</option>';
+        
+        Object.entries(CATEGORIES).forEach(([id, name]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = name;
+            selector.appendChild(option);
+        });
+    }
+
 
     /**
      * Gestisce l'apertura della modale di modifica.
@@ -781,8 +904,7 @@
 
         if (!product) return;
 
-        // I prodotti iniziali (ID che inizia con 'prod-') non possono essere rimossi, solo azzerati.
-        // Se un ID non inizia con 'custom-', consideralo di default/non rimovibile.
+        // I prodotti iniziali (ID che non inizia con 'custom-') non possono essere rimossi, solo azzerati.
         if (!productId.startsWith('custom-')) {
             product.quantity = 0;
             await saveOrderData();
@@ -801,6 +923,7 @@
 
     window.onload = function() {
         initializeFirebase();
+        populateCategorySelector();
 
         // 1. Listener Tastiera Numerica
         document.getElementById('keyboard').addEventListener('click', handleKeyClick);
@@ -808,7 +931,6 @@
         // 2. Listener Selezione Titolo
         document.getElementById('title-selector').addEventListener('change', (e) => {
             document.getElementById('header-title').textContent = e.target.value;
-            // Aggiorna anche il titolo del riepilogo se è aperto
             document.getElementById('summary-title').textContent = e.target.value;
         });
 
@@ -857,18 +979,21 @@
             addModal.classList.add('hidden');
             document.getElementById('new-product-name').value = '';
             document.getElementById('new-product-unit').value = '';
+            document.getElementById('new-product-category').value = '';
         });
         document.getElementById('save-new-product-btn').addEventListener('click', () => {
             const name = document.getElementById('new-product-name').value.trim();
             const unit = document.getElementById('new-product-unit').value.trim();
+            const category = document.getElementById('new-product-category').value;
 
-            if (name && unit) {
-                addNewProduct(name, unit);
+            if (name && unit && category) {
+                addNewProduct(name, unit, category);
                 addModal.classList.add('hidden');
                 document.getElementById('new-product-name').value = '';
                 document.getElementById('new-product-unit').value = '';
+                document.getElementById('new-product-category').value = '';
             } else {
-                showMessage("Nome e Unità sono obbligatori.", 'error');
+                showMessage("Nome, Unità e Categoria sono obbligatori.", 'error');
             }
         });
         
